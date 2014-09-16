@@ -68,6 +68,10 @@
   background-color: #b52a00;
 }
 
+.pickadate-cell .pickadate-in-range {
+  background-color: #FF6B3E;
+}
+
 .pickadate-cell .pickadate-active {
   color: white;
 }

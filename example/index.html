@@ -15,24 +15,18 @@
   </head>
   <body ng-app="testApp" id="ng-app" ng-controller="TestController">
     <div class="container">
-      <div pickadate ng-model="date" min-date="minDate" max-date="maxDate" disabled-dates='disabledDates'></div>
+      <div pickadate ng-model="selectedDates" range="true" min-date="minDate" max-date="maxDate" disabled-dates='disabledDates'></div>
 
       <div class="selected-date">
         Selected date is {{date || '(no date selected)'}}
       </div>
     </div>
 
-    <script type="text/javascript" src="http://code.angularjs.org/1.2.0-rc.2/angular.min.js"></script>
-    <script type="text/javascript" src="../src/angular-pickadate.js"></script>
-    <script type="text/javascript">
-      angular.module('testApp', ['pickadate']);
 
-      function TestController($scope) {
-        $scope.date = '2013-11-26';
-        $scope.minDate = '2013-10-05';
-        $scope.maxDate = '2014-12-04';
-        $scope.disabledDates = ['2013-11-19', '2013-11-30'];
-      }
-    </script>
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.20/angular.min.js"></script>
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.8.3/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.rawgit.com/icambron/twix.js/develop/bin/twix.min.js"></script>
+    <script type="text/javascript" src="../src/angular-pickadate.js"></script>
+    <script type="text/javascript" src="./app.js"></script>
   </body>
 </html>
