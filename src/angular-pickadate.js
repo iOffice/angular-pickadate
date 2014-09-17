@@ -1,12 +1,6 @@
 ;(function(angular){
   'use strict';
-  var indexOf = [].indexOf || function(item) {
-    for (var i = 0, l = this.length; i < l; i++) {
-      if (i in this && this[i] === item) return i;
-    }
-    return -1;
-  };
-
+  var indexOf = [].indexOf;
   angular.module('iOffice.pickadate', [])
     .factory('pickadateUtils', ['dateFilter', function(dateFilter) {
       return {
@@ -23,20 +17,6 @@
         stringToMoment: function(dateString) {
           return moment(dateString, 'YYYY-MM-DD').hour(3);
         },
-
-        dateRange: function(first, last, initial, format) {
-          var date, i, _i, dates = [];
-
-          if (!format) format = 'yyyy-MM-dd';
-
-          for (i = _i = first; first <= last ? _i < last : _i > last; i = first <= last ? ++_i : --_i) {
-            date = this.stringToDate(initial);
-            date.setDate(date.getDate() + i);
-            dates.push(dateFilter(date, format));
-          }
-
-          return dates;
-        }
       };
     }])
 
@@ -79,8 +59,8 @@
           '</div>',
 
         link: function(scope, element, attrs, ngModel)  {
-          var minDate       = scope.minDate && dateUtils.stringToDate(scope.minDate),
-              maxDate       = scope.maxDate && dateUtils.stringToDate(scope.maxDate),
+          var minDate       = scope.minDate && dateUtils.stringToMoment(scope.minDate, 'YYYY-MM-DD'),
+              maxDate       = scope.maxDate && dateUtils.stringToMoment(scope.maxDate, 'YYYY-MM-DD'),
               disabledDates = scope.disabledDates || [],
               currentDate   = (scope.defaultDate && dateUtils.stringToDate(scope.defaultDate)) || new Date(),
               range         = scope.range || false;
@@ -88,50 +68,48 @@
           scope.dayNames    = $locale.DATETIME_FORMATS.SHORTDAY;
           scope.currentDate = currentDate;
 
-          scope.render = function(selectedDates) {
-            var startDate = dateUtils.stringToDate(selectedDates.start);
-            var endDate = dateUtils.stringToDate(selectedDates.end);
+          scope.render = function() {
+            var initialDate = currentDate;
 
-            var initialDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1, 3);
+            var startOfMonth = moment(initialDate).startOf('month');
+            var endOfMonth = moment(initialDate).endOf('month');
+            var calStart = moment(startOfMonth).startOf('week');
+            var calEnd = moment(endOfMonth).endOf('week');
 
-            var currentMonth    = initialDate.getMonth() + 1,
-              dayCount          = new Date(initialDate.getFullYear(), initialDate.getMonth() + 1, 0, 3).getDate(),
-              prevDates         = dateUtils.dateRange(-initialDate.getDay(), 0, initialDate),
-              currentMonthDates = dateUtils.dateRange(0, dayCount, initialDate),
-              lastDate          = dateUtils.stringToDate(currentMonthDates[currentMonthDates.length - 1]),
-              nextMonthDates    = dateUtils.dateRange(1, 7 - lastDate.getDay(), lastDate),
-              allDates          = prevDates.concat(currentMonthDates, nextMonthDates),
-              dates             = [],
-              today             = moment().format('YYYY-MM-DD');
+            var dates = [];
 
-            // Add an extra row if needed to make the calendar to have 6 rows
-            if (allDates.length / 7 < 6) {
-              allDates = allDates.concat(dateUtils.dateRange(1, 8, allDates[allDates.length - 1]));
+            if (calStart.twix(calEnd).count('days') / 7 < 6) {
+              calEnd = moment(calEnd).add(1, 'week');
             }
 
-            var nextMonthInitialDate = new Date(initialDate);
-            nextMonthInitialDate.setMonth(currentMonth);
+            scope.allowPrevMonth = !minDate || minDate.isBefore(startOfMonth, 'd');
+            scope.allowNextMonth = !maxDate || maxDate.isAfter(endOfMonth, 'd');
 
-            scope.allowPrevMonth = !minDate || initialDate > minDate;
-            scope.allowNextMonth = !maxDate || nextMonthInitialDate <= maxDate;
+            var calendarRange = calStart.twix(calEnd);
+            var iter = calendarRange.iterate('days');
 
-            for (var i = 0; i < allDates.length; i++) {
-              var className = "", date = allDates[i];
+            do {
+              var className = "",
+                date = iter.next(),
+                formattedDate = date.format('YYYY-MM-DD');
 
-              if (date < scope.minDate || date > scope.maxDate) {
+              if ((minDate && date.isBefore(minDate, 'd')) || (maxDate && date.isAfter(maxDate, 'd'))) {
                 className = 'pickadate-disabled';
-              } else if (indexOf.call(disabledDates, date) >= 0) {
+              } else if (indexOf.call(disabledDates, formattedDate) >= 0) {
                 className = 'pickadate-disabled pickadate-unavailable';
               } else {
                 className = 'pickadate-enabled';
               }
 
-              if (date === today) {
+              if (date.isSame(moment(), 'd')) {
                 className += ' pickadate-today';
               }
 
-              dates.push({date: date, className: className});
-            }
+              dates.push({
+                date: formattedDate,
+                className: className
+              });
+            } while(iter.hasNext());
 
             scope.dates = dates;
           };
@@ -191,37 +169,28 @@
             return classesToApply;
           };
 
-
-          // scope.dates = {
-          //   start: 2014-09-21,
-          //   end: 2014-09-22;
-          // }
-
-          // scope.disabledDates = [2014-09-24, 2014-09-29]
-
           ngModel.$render = function () {
             var dates = ngModel.$modelValue;
+
             if ((dates) && dates.start && (indexOf.call(disabledDates, dates.start) === -1)) {
               scope.currentDate = currentDate = dateUtils.stringToDate(dates.start);
 
-            if (dates.end && (indexOf.call(disabledDates, dates.end) >= 0)) {
+              dates.end = dates.end || dates.start;
+              
+              if (indexOf.call(disabledDates, dates.end) >= 0) {
                 dates.end = dates.start;
               }
             } else if (dates) {
               // if the initial date set by the user is in the disabled dates list, unset it
               scope.setDates({});
             }
-            scope.render(dates);
+            scope.render();
           };
 
           scope.changeMonth = function (offset) {
-            // If the current date is January 31th, setting the month to date.getMonth() + 1
-            // sets the date to March the 3rd, since the date object adds 30 days to the current
-            // date. Settings the date to the 2nd day of the month is a workaround to prevent this
-            // behaviour
-            currentDate.setDate(1);
-            currentDate.setMonth(currentDate.getMonth() + offset);
-            scope.render(currentDate);
+            var currentMonth = moment(currentDate).month();
+            scope.currentDate = currentDate = moment(currentDate).month(currentMonth + offset).toDate();
+            scope.render();
           };
 
           function isDateDisabled(dateObj) {
