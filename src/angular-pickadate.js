@@ -121,7 +121,10 @@
 
           scope.setDate = function(dateObj) {
             if (isDateDisabled(dateObj)) return;
-             if (Object.keys(dateObj).length === 0) ngModel.$setViewValue({});
+            if (!dateObj.date) {
+              ngModel.$setViewValue({});
+              return;
+            }
 
             var dates = scope.selectedDates;
             var start = dateUtils.stringToMoment(dates.start);
