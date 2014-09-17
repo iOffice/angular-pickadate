@@ -16,7 +16,7 @@
 
         stringToMoment: function(dateString) {
           return moment(dateString, 'YYYY-MM-DD').hour(3);
-        },
+        }
       };
     }])
 
@@ -121,6 +121,7 @@
 
           scope.setDate = function(dateObj) {
             if (isDateDisabled(dateObj)) return;
+             if (Object.keys(dateObj).length === 0) ngModel.$setViewValue({});
 
             var dates = scope.selectedDates;
             var start = dateUtils.stringToMoment(dates.start);
@@ -182,7 +183,7 @@
               }
             } else if (dates) {
               // if the initial date set by the user is in the disabled dates list, unset it
-              scope.setDates({});
+              scope.setDate({});
             }
             scope.render();
           };
