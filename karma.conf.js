@@ -18,6 +18,8 @@ module.exports = {
   files: [
     'test/lib/angular.js',
     'test/lib/*.js',
+    'http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.8.3/moment.min.js',
+    'https://cdn.rawgit.com/icambron/twix.js/develop/bin/twix.min.js',
     'src/angular-pickadate.js',
     'node_modules/jquery/dist/jquery.js',
     'test/**/*.spec.js'

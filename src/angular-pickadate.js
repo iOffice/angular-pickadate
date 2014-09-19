@@ -69,10 +69,8 @@
           scope.currentDate = currentDate;
 
           scope.render = function() {
-            var initialDate = currentDate;
-
-            var startOfMonth = moment(initialDate).startOf('month');
-            var endOfMonth = moment(initialDate).endOf('month');
+            var startOfMonth = moment(currentDate).startOf('month');
+            var endOfMonth = moment(currentDate).endOf('month');
             var calStart = moment(startOfMonth).startOf('week');
             var calEnd = moment(endOfMonth).endOf('week');
 
@@ -88,7 +86,7 @@
             var calendarRange = calStart.twix(calEnd);
             var iter = calendarRange.iterate('days');
 
-            do {
+            while(iter.hasNext()) {
               var className = "",
                 date = iter.next(),
                 formattedDate = date.format('YYYY-MM-DD');
@@ -109,7 +107,7 @@
                 date: formattedDate,
                 className: className
               });
-            } while(iter.hasNext());
+            }
 
             scope.dates = dates;
           };
@@ -128,7 +126,6 @@
 
             var dates = scope.selectedDates;
             var start = dateUtils.stringToMoment(dates.start);
-            var end = dateUtils.stringToMoment(dates.end);
             var selectedDate = dateUtils.stringToMoment(dateObj.date);
             var newSelection = {};
 
@@ -139,13 +136,14 @@
               return !(disabledDates.every(function(date) {
                 return !selectedStart.twix(selectedEnd).contains(moment(date, 'YYYY-MM-DD'));
               }));
-            }
+            };
 
             // We already have a start date
             if (dates.start
               && (dates.start === dates.end)
               && selectedDate.isAfter(start, 'd')
               && !selectedDate.isSame(start, 'd')) {
+
               newSelection.start = dates.start;
               newSelection.end = dateObj.date;
             } else {

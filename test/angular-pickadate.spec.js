@@ -10,7 +10,7 @@ describe('pickadate', function () {
              'disabled-dates="disabledDates">' +
              '</div>';
 
-  beforeEach(module("pickadate"));
+  beforeEach(module("iOffice.pickadate"));
 
   beforeEach(function() {
     inject(function($rootScope, _$compile_){
@@ -32,43 +32,60 @@ describe('pickadate', function () {
   describe('Model binding', function() {
 
     beforeEach(function() {
-      $scope.date = '2014-05-17';
+      $scope.selecedDates = {
+        start: '2014-05-17',
+        end: '2014-05-20'
+      };
+
       $scope.disabledDates = ['2014-05-26'];
       compile();
     });
 
     it("updates the ngModel value when a date is clicked", function() {
-      expect($scope.date).to.equal('2014-05-17');
+      expect($scope.selecedDates.start).to.equal('2014-05-17');
+      expect($scope.selecedDates.end).to.equal('2014-05-20');
+
       browserTrigger($('.pickadate-enabled:contains(27)'), 'click');
-      expect($scope.date).to.equal('2014-05-27');
+
+      expect($scope.date.start).to.equal('2014-05-27');
+      expect($scope.date.end).to.equal('2014-05-27');
     });
 
     it("doesn't allow an unavailable date to be clicked", function() {
-      expect($scope.date).to.equal('2014-05-17');
+      expect($scope.selecedDates.start).to.equal('2014-05-17');
+      expect($scope.selecedDates.end).to.equal('2014-05-20');
+
       browserTrigger($('.pickadate-enabled:contains(26)'), 'click');
-      expect($scope.date).to.equal('2014-05-17');
+
+      expect($scope.selecedDates.start).to.equal('2014-05-17');
+      expect($scope.selecedDates.end).to.equal('2014-05-20');
     });
 
     it("sets the ngModel as undefined if the model date is in the disabled list", function() {
-      $scope.date = '2014-05-26';
+      $scope.dates.start = '2014-05-26';
       $scope.$digest();
-      expect($scope.date).to.be.undefined;
+      expect($scope.selecedDates.start).to.be.undefined;
+      expect($scope.selecedDates.end).to.be.undefined;
     });
   });
 
   describe('Rendering', function() {
 
     beforeEach(function() {
-      $scope.date = '2014-05-17';
+      $scope.selecedDates = {
+        start: '2014-05-17',
+        end: '2014-05-20'
+      };
+
       $scope.disabledDates = ['2014-05-26'];
       compile();
     });
 
     describe('Selected date', function() {
 
-      it("adds the 'pickadate-active' class for the selected date", function() {
+      it("adds the 'pickadate-active' class for the selected start", function() {
         expect($('.pickadate-active')).to.have.text('17');
-        expect($('.pickadate-active').length).to.equal(1);
+        expect($('.pickadate-active').length).to.equal(2);
 
         browserTrigger($('.pickadate-enabled:contains(27)'), 'click');
 
