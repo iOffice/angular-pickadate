@@ -63,7 +63,7 @@
               maxDate       = scope.maxDate && dateUtils.stringToMoment(scope.maxDate, 'YYYY-MM-DD'),
               disabledDates = scope.disabledDates || [],
               currentDate   = (scope.defaultDate && dateUtils.stringToDate(scope.defaultDate)) || new Date(),
-              range         = scope.range || false;
+              range         = scope.range !== false;
 
           scope.dayNames    = $locale.DATETIME_FORMATS.SHORTDAY;
           scope.currentDate = currentDate;
@@ -142,7 +142,8 @@
             if (dates.start
               && (dates.start === dates.end)
               && selectedDate.isAfter(start, 'd')
-              && !selectedDate.isSame(start, 'd')) {
+              && !selectedDate.isSame(start, 'd')
+              && range) {
 
               newSelection.start = dates.start;
               newSelection.end = dateObj.date;
