@@ -2,25 +2,7 @@
   'use strict';
   var indexOf = [].indexOf;
   angular.module('iOffice.pickadate', [])
-    .factory('pickadateUtils', ['dateFilter', function(dateFilter) {
-      return {
-        isDate: function(obj) {
-          return Object.prototype.toString.call(obj) === '[object Date]';
-        },
-
-        stringToDate: function(dateString) {
-          if (this.isDate(dateString)) return new Date(dateString);
-          return this.stringToMoment(dateString).toDate();
-          
-        },
-
-        stringToMoment: function(dateString) {
-          return moment(dateString, 'YYYY-MM-DD').hour(3);
-        }
-      };
-    }])
-
-    .directive('pickadate', ['$locale', 'pickadateUtils', 'dateFilter', function($locale, dateUtils, dateFilter) {
+    .directive('pickadate', ['$locale', function($locale) {
       return {
         require: 'ngModel',
         scope: {
@@ -59,20 +41,36 @@
           '</div>',
 
         link: function(scope, element, attrs, ngModel)  {
-          var minDate       = scope.minDate && dateUtils.stringToMoment(scope.minDate, 'YYYY-MM-DD'),
-              maxDate       = scope.maxDate && dateUtils.stringToMoment(scope.maxDate, 'YYYY-MM-DD'),
-              disabledDates = scope.disabledDates || [],
-              currentDate   = (scope.defaultDate && dateUtils.stringToDate(scope.defaultDate)) || new Date(),
+          var minDate       = scope.minDate && moment(scope.minDate),
+              maxDate       = scope.maxDate && moment(scope.maxDate),
+              currentDate   = (scope.defaultDate && moment(scope.defaultDate).toDate()) || new Date(),
               range         = scope.range !== false;
 
           scope.dayNames    = $locale.DATETIME_FORMATS.SHORTDAY;
           scope.currentDate = currentDate;
+
+          scope.$watch('minDate', function(newVal) {
+            minDate = scope.minDate && moment(scope.minDate);
+            scope.render();
+          });
+
+          scope.$watch('maxDate', function(newVal) {
+            maxDate = scope.maxDate && moment(scope.maxDate);
+            scope.render();
+          });
+
+          scope.$watchCollection('disabledDates', function(newVal) {
+            scope.disabledDates = (newVal || []).sort(function(a, b) { return moment(a).toDate() - moment(b).toDate()});
+            scope.render();
+          });
 
           scope.render = function() {
             var startOfMonth = moment(currentDate).startOf('month');
             var endOfMonth = moment(currentDate).endOf('month');
             var calStart = moment(startOfMonth).startOf('week');
             var calEnd = moment(endOfMonth).endOf('week');
+            //var minDate = $scope.minDate;
+            //var maxDate = $scope.maxDate;
 
             var dates = [];
 
@@ -88,12 +86,11 @@
 
             while(iter.hasNext()) {
               var className = "",
-                date = iter.next(),
-                formattedDate = date.format('YYYY-MM-DD');
+                date = iter.next();
 
               if ((minDate && date.isBefore(minDate, 'd')) || (maxDate && date.isAfter(maxDate, 'd'))) {
                 className = 'pickadate-disabled';
-              } else if (indexOf.call(disabledDates, formattedDate) >= 0) {
+              } else if (isDateDisabled(date)) {
                 className = 'pickadate-disabled pickadate-unavailable';
               } else {
                 className = 'pickadate-enabled';
@@ -104,7 +101,7 @@
               }
 
               dates.push({
-                date: formattedDate,
+                date: date.toDate(),
                 className: className
               });
             }
@@ -112,38 +109,57 @@
             scope.dates = dates;
           };
 
+          scope.getDateClasses = function(d) {
+            if (isDateDisabled(d.date)) return;
+
+            var classesToApply = [];
+            var selectedDates = scope.selectedDates;
+            var start = moment(selectedDates.start);
+            var end = moment(selectedDates.end);
+
+            if (start.isSame(d.date, 'd') || end.isSame(d.date, 'd')) {
+              classesToApply.push(' pickadate-active');
+            } else if (start.twix(end).contains(moment(d.date))) {
+              classesToApply.push(' pickadate-in-range');
+            }
+
+            return classesToApply;
+          };
+
           var assignDates = function(dates) {
             if (!dates || Object.keys(dates).length === 0) ngModel.$setViewValue({});
+
             ngModel.$setViewValue(dates);
           };
 
           scope.setDate = function(dateObj) {
-            if (isDateDisabled(dateObj)) return;
+            if ((/pickadate-disabled/.test(dateObj.className))) return;
             if (!dateObj.date) {
               ngModel.$setViewValue({});
               return;
             }
 
             var dates = scope.selectedDates;
-            var start = dateUtils.stringToMoment(dates.start);
-            var selectedDate = dateUtils.stringToMoment(dateObj.date);
+            var start = moment(dates.start);
+            var end = moment(dates.end);
+            var selectedDate = moment(dateObj.date);
             var newSelection = {};
 
             var rangeContainsDisabledDate = function() {
-              var selectedStart = dateUtils.stringToMoment(newSelection.start),
-                selectedEnd = dateUtils.stringToMoment(newSelection.end);
+              var selectedStart = moment(newSelection.start),
+                selectedEnd = moment(newSelection.end);
 
-              return !(disabledDates.every(function(date) {
+              return !(scope.disabledDates.every(function(date) {
                 return !selectedStart.twix(selectedEnd).contains(moment(date, 'YYYY-MM-DD'));
               }));
             };
 
             // We already have a start date
-            if (dates.start
-              && (dates.start === dates.end)
-              && selectedDate.isAfter(start, 'd')
-              && !selectedDate.isSame(start, 'd')
-              && range) {
+            if (dates.start &&
+              start.isSame(end, 'd') &&
+              selectedDate.isAfter(start, 'd') &&
+              !selectedDate.isSame(start, 'd') &&
+              range) {
 
               newSelection.start = dates.start;
               newSelection.end = dateObj.date;
@@ -157,35 +173,27 @@
             }
           };
 
-          scope.getDateClasses = function(d) {
-            var classesToApply = [];
-            var selectedDates = scope.selectedDates;
-            var start = dateUtils.stringToMoment(selectedDates.start);
-            var end = dateUtils.stringToMoment(selectedDates.end);
-
-            if (d.date === selectedDates.start || d.date === selectedDates.end) {
-              classesToApply.push(' pickadate-active');
-            } else if (start.twix(end).contains(moment(d.date, 'YYYY-MM-DD'))) {
-              classesToApply.push(' pickadate-in-range');
-            }
-
-            return classesToApply;
-          };
-
           ngModel.$render = function () {
             var dates = ngModel.$modelValue;
 
-            if ((dates) && dates.start && (indexOf.call(disabledDates, dates.start) === -1)) {
-              scope.currentDate = currentDate = dateUtils.stringToDate(dates.start);
+            if ((dates) && dates.start && !isDateDisabled(dates.start)) {
+              scope.currentDate = currentDate = moment(dates.start).toDate();
 
-              dates.end = dates.end || dates.start;
+              dates.end = dates.end || moment(dates.start).toDate(); //clone
               
-              if (indexOf.call(disabledDates, dates.end) >= 0) {
-                dates.end = dates.start;
+              if (isDateDisabled(dates.end)) {
+                dates.end = moment(dates.start).toDate();
               }
             } else if (dates) {
               // if the initial date set by the user is in the disabled dates list, unset it
-              scope.setDate({});
+
+              var tempDate = moment(dates.start);
+
+              while(isDateDisabled(tempDate)) {
+                tempDate.add(1, 'd');
+              }
+
+              scope.setDate({date: tempDate});
             }
             scope.render();
           };
@@ -196,8 +204,12 @@
             scope.render();
           };
 
-          function isDateDisabled(dateObj) {
-            return (/pickadate-disabled/.test(dateObj.className));
+          function isDateDisabled(date) {
+            var dateIndex = _.findIndex(scope.disabledDates, function(d) {
+              return moment(date).isSame(d, 'd')
+            });
+
+            return dateIndex >= 0;
           }
         }
       };
