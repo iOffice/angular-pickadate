@@ -16,12 +16,12 @@
     return false;
   }
 
-  angular.module('pickadate', [])
+  angular.module('iOffice.pickadate', [])
 
     .provider('pickadateI18n', function() {
       var defaults = {
-        'prev': 'prev',
-        'next': 'next'
+        'prev': '{{prevMonthInitialDate | date:"MMM"}}',
+        'next': '{{nextMonthInitialDate | date:"MMM"}}'
       };
 
       this.translations = {};
@@ -79,14 +79,23 @@
           options = options || {};
           date = new Date(date);
 
+
           while (date.getDay() !== options.weekStartsOn) {
             date.setDate(date.getDate() - 1);
           }
-
+          var firstDayOfWeek = options.minDate;
+          firstDayOfWeek.setDate(options.minDate.getDate()-options.minDate.getDay()+options.weekStartsOn-1);
+          var lastDayOfWeek = options.maxDate;
+          lastDayOfWeek.setDate(options.maxDate.getDate()+6-options.maxDate.getDay());
           for (var i = 0; i < 42; i++) {  // 42 == 6 rows of dates
-            if (options.noExtraRows && date.getDay() === options.weekStartsOn && date > lastDate) break;
 
-            dates.push(new Date(date));
+            if (options.noExtraRows && date.getDay() === options.weekStartsOn && date > lastDate) break;
+            if (date > firstDayOfWeek && date <= lastDayOfWeek && options.noExtraRows) {
+              dates.push(new Date(date));
+            } else if (!options.noExtraRows){
+              dates.push(new Date(date));
+            }
+
             date.setDate(date.getDate() + 1);
           }
 
@@ -171,12 +180,22 @@
 
           scope.setDate = function(dateObj) {
             var monthOffset = getMonthOffset(dateObj.dateObj);
+            var temp = new Date();
+            var minDate = dateUtils.parseDate(scope.minDate, format) || new Date(0);
 
-            if (isOutOfRange(dateObj.dateObj) || isDateDisabled(dateObj.date)) return;
+            if (
+              dateObj.dateObj.setHours(0,0,0) < temp.setDate(temp.getDate()-1)
+            ) { return; }
+
+            if (isOutOfRange(dateObj.dateObj) &&  isDateDisabled(dateObj.date)) return;
+
+            if (isOutOfRange(dateObj.dateObj) && scope.currentDate.getMonth() >= scope.minDate.getMonth())  {
+                scope.changeMonth(monthOffset);
+            }
             selectedDates = allowMultiple ? toggleDate(dateObj.date, selectedDates) : [dateObj.date];
             setViewValue(selectedDates);
 
-            if (monthOffset !== 0) scope.changeMonth(monthOffset);
+            //if (monthOffset !== 0) scope.changeMonth(monthOffset);
 
             scope.displayPicker = !wantsModal;
           };
@@ -281,12 +300,23 @@
           function render() {
             var initialDate   = new Date(scope.currentDate.getFullYear(), scope.currentDate.getMonth(), 1, 3),
                 currentMonth  = initialDate.getMonth() + 1,
-                allDates      = dateUtils.buildDates(initialDate, { weekStartsOn: weekStartsOn, noExtraRows: noExtraRows }),
+                allDates      = dateUtils.buildDates(initialDate, { weekStartsOn: weekStartsOn, noExtraRows: noExtraRows,
+                  minDate: dateUtils.parseDate(scope.minDate, format) || new Date(0),
+                  maxDate: dateUtils.parseDate(scope.maxDate, format) || new Date(99999999999999)
+                }),
                 dates         = [],
                 today         = dateFilter(new Date(), format);
+            scope.today = new Date();
+            minDate = dateUtils.parseDate(scope.minDate, format) || new Date(0);
+            maxDate = dateUtils.parseDate(scope.maxDate, format) || new Date(99999999999999);
 
             var nextMonthInitialDate = new Date(initialDate);
             nextMonthInitialDate.setMonth(currentMonth);
+            scope.nextMonthInitialDate = nextMonthInitialDate;
+
+            var prevMonthInitialDate = new Date(initialDate);
+            prevMonthInitialDate.setMonth(currentMonth-2);
+            scope.prevMonthInitialDate = prevMonthInitialDate;
 
             scope.allowPrevMonth = !minDate || initialDate > minDate;
             scope.allowNextMonth = !maxDate || nextMonthInitialDate <= maxDate;
@@ -298,7 +328,9 @@
                   date       = dateFilter(dateObj, format),
                   isDisabled = isDateDisabled(date);
 
-              if (isOutOfRange(dateObj) || isDisabled) {
+              if (dateObj.getMonth() !== currentMonth-1 && dateObj > minDate && !isDisabled && dateObj < maxDate) {
+                classNames.push('pickadate-outofrange-selectable')
+              } else if (isOutOfRange(dateObj) || isDisabled) {
                 classNames.push('pickadate-disabled');
               } else {
                 classNames.push('pickadate-enabled');
