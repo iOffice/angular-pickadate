@@ -182,7 +182,7 @@
             var monthOffset = getMonthOffset(dateObj.dateObj);
             var temp = new Date();
             var minDate = dateUtils.parseDate(scope.minDate, format) || new Date(0);
-
+            if (isDateDisabled(dateObj.date)) return;
             if (
               dateObj.dateObj.setHours(0,0,0) < temp.setDate(temp.getDate()-1)
             ) { return; }
