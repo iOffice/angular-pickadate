@@ -189,7 +189,7 @@
 
             if (isOutOfRange(dateObj.dateObj) &&  isDateDisabled(dateObj.date)) return;
 
-            if (isOutOfRange(dateObj.dateObj) && scope.currentDate.getMonth() >= scope.minDate.getMonth())  {
+            if (isOutOfRange(dateObj.dateObj) && scope.currentDate.getMonth() >= minDate.getMonth())  {
                 scope.changeMonth(monthOffset);
             }
             selectedDates = allowMultiple ? toggleDate(dateObj.date, selectedDates) : [dateObj.date];
